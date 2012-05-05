@@ -1,0 +1,17 @@
+Source: libguac-client-rdp
+Priority: extra
+Maintainer: Michael Jumper <zhangmaike@users.sourceforge.net>
+Build-Depends: debhelper (>= 7.0.50~), dh-autoreconf, libguac-dev (>= 0.6), libguac-dev (<< 0.6), libcairo-dev, libfreerdp-dev (>= 1.0.1)
+Standards-Version: 3.9.2
+Section: libs
+Homepage: http://guacamole.sourceforge.net/
+Vcs-Git: git://guacamole.git.sourceforge.net/gitroot/guacamole/libguac-client-rdp
+Vcs-Browser: http://guacamole.git.sourceforge.net/git/gitweb.cgi?p=guacamole/libguac-client-rdp;a=tree
+
+Package: libguac-client-rdp0
+Section: libs
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: RDP client plugin for Guacamole
+ A plugin for the Guacamole proxy daemon (guacd) that provides
+ support for the RDP protocol (Windows Remote Desktop).

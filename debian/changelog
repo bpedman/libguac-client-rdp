@@ -1,0 +1,6 @@
+libguac-client-rdp (0.6.0-1) unstable; urgency=low
+
+  * Initial release
+
+ -- Michael Jumper <zhangmaike@users.sourceforge.net>  Fri, 4 May 2012 19:35:00 -0700
+
