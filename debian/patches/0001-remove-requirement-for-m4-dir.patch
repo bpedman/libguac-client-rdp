@@ -1,0 +1,12 @@
+diff --git a/Makefile.am b/Makefile.am
+index a18a14f..61693fe 100644
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -36,7 +36,6 @@
+ 
+ AUTOMAKE_OPTIONS = foreign
+ 
+-ACLOCAL_AMFLAGS = -I m4
+ AM_CFLAGS = -Werror -Wall -pedantic -Iinclude
+ 
+ lib_LTLIBRARIES = libguac-client-rdp.la
