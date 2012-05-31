@@ -2,7 +2,7 @@ Source: libguac-client-rdp
 Priority: extra
 Maintainer: Michael Jumper <zhangmaike@users.sourceforge.net>
 Build-Depends: debhelper (>= 7.0.50~), dh-autoreconf, libguac-dev (>= 0.6), libguac-dev (<< 0.7), libcairo-dev, libfreerdp-dev (>= 1.0.1)
-Standards-Version: 3.9.2
+Standards-Version: 3.9.3
 Section: libs
 Homepage: http://guacamole.sourceforge.net/
 Vcs-Git: git://guacamole.git.sourceforge.net/gitroot/guacamole/libguac-client-rdp
