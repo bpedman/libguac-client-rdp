@@ -40,7 +40,7 @@ ACLOCAL_AMFLAGS = -I m4
 AM_CFLAGS = -Werror -Wall -Iinclude
 
 lib_LTLIBRARIES = libguac-client-rdp.la
-freerdp_LTLIBRARIES = guac_rdpsnd.la
+freerdp_LTLIBRARIES = guacsnd-client.la
 
 libguac_client_rdp_la_SOURCES = \
     $(OGG_SOURCES)         \
@@ -58,7 +58,7 @@ libguac_client_rdp_la_SOURCES = \
 	src/rdp_pointer.c      \
 	src/wav_encoder.c
 
-guac_rdpsnd_la_SOURCES =   \
+guacsnd_client_la_SOURCES =   \
 	guac_rdpsnd/messages.c \
 	guac_rdpsnd/service.c  \
 	src/audio.c
@@ -88,7 +88,7 @@ endif
 
 
 libguac_client_rdp_la_LDFLAGS = -version-info 0:0:0
-guac_rdpsnd_la_LDFLAGS = -module -avoid-version -shared
+guacsnd_client_la_LDFLAGS = -module -avoid-version -shared
 
 freerdpdir = ${libdir}/freerdp/
 

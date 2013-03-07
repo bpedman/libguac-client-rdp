@@ -39,7 +39,7 @@
 #include <freerdp/freerdp.h>
 #include <freerdp/channels/channels.h>
 #include <freerdp/utils/event.h>
-#include <freerdp/plugins/cliprdr.h>
+#include <freerdp/client/cliprdr.h>
 
 #include <guacamole/client.h>
 #include <guacamole/protocol.h>
@@ -92,7 +92,7 @@ void guac_rdp_process_cb_monitor_ready(guac_client* client, RDP_EVENT* event) {
     /* Received notification of clipboard support. */
 
     /* Respond with supported format list */
-    format_list->formats = (uint32*) malloc(sizeof(uint32));
+    format_list->formats = (UINT32*) malloc(sizeof(UINT32));
     format_list->formats[0] = CB_FORMAT_TEXT;
     format_list->num_formats = 1;
 
@@ -159,11 +159,11 @@ void guac_rdp_process_cb_data_request(guac_client* client,
 
         /* Set data and length */
         if (clipboard != NULL) {
-            data_response->data = (uint8*) strdup(clipboard);
+            data_response->data = (UINT8*) strdup(clipboard);
             data_response->size = strlen(clipboard) + 1;
         }
         else {
-            data_response->data = (uint8*) strdup("");
+            data_response->data = (UINT8*) strdup("");
             data_response->size = 1;
         }
 

@@ -49,8 +49,8 @@ AC_CHECK_LIB([guac], [guac_client_plugin_open],, AC_MSG_ERROR("libguac must be i
 AC_CHECK_LIB([cairo], [cairo_create],, AC_MSG_ERROR("cairo is required for drawing instructions"))
 AC_CHECK_LIB([freerdp-cache], [glyph_cache_register_callbacks],, AC_MSG_ERROR("libfreerdp-cache is required (part of FreeRDP)"))
 AC_CHECK_LIB([freerdp-core], [freerdp_new],, AC_MSG_ERROR("libfreerdp-core is required (part of FreeRDP)"))
-AC_CHECK_LIB([freerdp-channels], [freerdp_channels_new],, AC_MSG_ERROR("libfreerdp-channels is required (part of FreeRDP)"))
-AC_CHECK_LIB([freerdp-utils], [xzalloc],, AC_MSG_ERROR("libfreerdp-utils is required (part of FreeRDP)"))
+AC_CHECK_LIB([freerdp-client], [freerdp_channels_new],, AC_MSG_ERROR("libfreerdp-client is required (part of FreeRDP)"))
+AC_CHECK_LIB([freerdp-utils], [svc_plugin_init],, AC_MSG_ERROR("libfreerdp-utils is required (part of FreeRDP)"))
 AC_CHECK_LIB([freerdp-codec], [freerdp_image_convert],, AC_MSG_ERROR("libfreerdp-codec is required (part of FreeRDP)"))
 AC_CHECK_LIB([pthread], [pthread_mutex_init],, AC_MSG_ERROR("libpthread is required"))
 
@@ -73,7 +73,7 @@ else
 fi
 
 # Checks for header files.
-AC_CHECK_HEADERS([guacamole/client.h guacamole/guacio.h guacamole/protocol.h freerdp/locale/keyboard.h freerdp/kbd/layouts.h])
+AC_CHECK_HEADERS([guacamole/client.h guacamole/guacio.h guacamole/protocol.h freerdp/locale/keyboard.h])
 
 # Check for FreeRDP version-specific features
 AC_CHECK_MEMBERS([rdpPointer.SetDefault, rdpPointer.SetNull],

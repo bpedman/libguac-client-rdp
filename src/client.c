@@ -48,7 +48,6 @@
 #include <errno.h>
 
 #include <freerdp/freerdp.h>
-#include <freerdp/utils/memory.h>
 #include <freerdp/cache/bitmap.h>
 #include <freerdp/cache/brush.h>
 #include <freerdp/cache/glyph.h>
@@ -58,6 +57,8 @@
 #include <freerdp/channels/channels.h>
 #include <freerdp/input.h>
 #include <freerdp/constants.h>
+#include <freerdp/codec/color.h>
+#include <freerdp/client/channels.h>
 
 #include <guacamole/socket.h>
 #include <guacamole/protocol.h>
@@ -114,11 +115,11 @@ enum ARGS_IDX {
     RDP_ARGS_COUNT
 };
 
-int __guac_receive_channel_data(freerdp* rdp_inst, int channelId, uint8* data, int size, int flags, int total_size) {
+int __guac_receive_channel_data(freerdp* rdp_inst, int channelId, BYTE* data, int size, int flags, int total_size) {
     return freerdp_channels_data(rdp_inst, channelId, data, size, flags, total_size);
 }
 
-boolean rdp_freerdp_pre_connect(freerdp* instance) {
+BOOL rdp_freerdp_pre_connect(freerdp* instance) {
 
     rdpContext* context = instance->context;
     guac_client* client = ((rdp_freerdp_context*) context)->client;
@@ -129,6 +130,8 @@ boolean rdp_freerdp_pre_connect(freerdp* instance) {
     rdpPrimaryUpdate* primary;
     CLRCONV* clrconv;
     int i;
+
+    freerdp_register_addin_provider(freerdp_channels_load_static_addin_entry, 0);
 
     rdp_guac_client_data* guac_client_data =
         (rdp_guac_client_data*) client->data;
@@ -171,9 +174,9 @@ boolean rdp_freerdp_pre_connect(freerdp* instance) {
 
             /* Load sound plugin */
             if (freerdp_channels_load_plugin(channels, instance->settings,
-                        "guac_rdpsnd", guac_client_data->audio))
+                        "guacsnd", guac_client_data->audio))
                 guac_client_log_error(client,
-                        "Failed to load guac_rdpsnd plugin.");
+                        "Failed to load guacsnd plugin.");
 
         }
         else
@@ -183,18 +186,15 @@ boolean rdp_freerdp_pre_connect(freerdp* instance) {
     } /* end if audio enabled */
 
     /* Init color conversion structure */
-    clrconv = xnew(CLRCONV);
-    clrconv->alpha = 1;
-    clrconv->invert = 0;
-    clrconv->rgb555 = 0;
-    clrconv->palette = xnew(rdpPalette);
+    clrconv = freerdp_clrconv_new(CLRCONV_ALPHA);
     ((rdp_freerdp_context*) context)->clrconv = clrconv;
 
     /* Init FreeRDP cache */
     instance->context->cache = cache_new(instance->settings);
 
     /* Set up bitmap handling */
-    bitmap = xnew(rdpBitmap);
+    bitmap = (rdpBitmap*) malloc(sizeof(rdpBitmap));
+    ZeroMemory(bitmap, sizeof(rdpBitmap));
     bitmap->size = sizeof(guac_rdp_bitmap);
     bitmap->New = guac_rdp_bitmap_new;
     bitmap->Free = guac_rdp_bitmap_free;
@@ -202,10 +202,11 @@ boolean rdp_freerdp_pre_connect(freerdp* instance) {
     bitmap->Decompress = guac_rdp_bitmap_decompress;
     bitmap->SetSurface = guac_rdp_bitmap_setsurface;
     graphics_register_bitmap(context->graphics, bitmap);
-    xfree(bitmap);
+    free(bitmap);
 
     /* Set up glyph handling */
-    glyph = xnew(rdpGlyph);
+    glyph = (rdpGlyph*) malloc(sizeof(rdpGlyph));
+    ZeroMemory(glyph, sizeof(rdpGlyph));
     glyph->size = sizeof(guac_rdp_glyph);
     glyph->New = guac_rdp_glyph_new;
     glyph->Free = guac_rdp_glyph_free;
@@ -213,10 +214,11 @@ boolean rdp_freerdp_pre_connect(freerdp* instance) {
     glyph->BeginDraw = guac_rdp_glyph_begindraw;
     glyph->EndDraw = guac_rdp_glyph_enddraw;
     graphics_register_glyph(context->graphics, glyph);
-    xfree(glyph);
+    free(glyph);
 
     /* Set up pointer handling */
-    pointer = xnew(rdpPointer);
+    pointer = (rdpPointer*) malloc(sizeof(rdpPointer));
+    ZeroMemory(pointer, sizeof(rdpPointer));
     pointer->size = sizeof(guac_rdp_pointer);
     pointer->New = guac_rdp_pointer_new;
     pointer->Free = guac_rdp_pointer_free;
@@ -228,7 +230,7 @@ boolean rdp_freerdp_pre_connect(freerdp* instance) {
     pointer->SetDefault = guac_rdp_pointer_set_default;
 #endif
     graphics_register_pointer(context->graphics, pointer);
-    xfree(pointer);
+    free(pointer);
 
     /* Set up GDI */
     instance->update->EndPaint = guac_rdp_gdi_end_paint;
@@ -253,14 +255,14 @@ boolean rdp_freerdp_pre_connect(freerdp* instance) {
     if (freerdp_channels_pre_connect(channels, instance)) {
         guac_protocol_send_error(client->socket, "Error initializing RDP client channel manager");
         guac_socket_flush(client->socket);
-        return false;
+        return FALSE;
     }
 
-    return true;
+    return TRUE;
 
 }
 
-boolean rdp_freerdp_post_connect(freerdp* instance) {
+BOOL rdp_freerdp_post_connect(freerdp* instance) {
 
     rdpContext* context = instance->context;
     guac_client* client = ((rdp_freerdp_context*) context)->client;
@@ -270,7 +272,7 @@ boolean rdp_freerdp_post_connect(freerdp* instance) {
     if (freerdp_channels_post_connect(channels, instance)) {
         guac_protocol_send_error(client->socket, "Error initializing RDP client channel manager");
         guac_socket_flush(client->socket);
-        return false;
+        return FALSE;
     }
 
     /* Client handlers */
@@ -280,7 +282,7 @@ boolean rdp_freerdp_post_connect(freerdp* instance) {
     client->key_handler = rdp_guac_client_key_handler;
     client->clipboard_handler = rdp_guac_client_clipboard_handler;
 
-    return true;
+    return TRUE;
 
 }
 
@@ -331,7 +333,7 @@ int guac_client_init(guac_client* client, int argc, char** argv) {
 
     char* hostname;
     int port = RDP_DEFAULT_PORT;
-    boolean bitmap_cache;
+    BOOL BitmapCacheEnabled;
 
     /**
      * Selected server-side keymap. Client will be assumed to also use this
@@ -380,80 +382,79 @@ int guac_client_init(guac_client* client, int argc, char** argv) {
     settings = rdp_inst->settings;
 
     /* Console */
-    settings->console_session = (strcmp(argv[IDX_CONSOLE], "true") == 0);
-    settings->console_audio   = (strcmp(argv[IDX_CONSOLE_AUDIO], "true") == 0);
+    settings->ConsoleSession = (strcmp(argv[IDX_CONSOLE], "true") == 0);
+    settings->RemoteConsoleAudio   = (strcmp(argv[IDX_CONSOLE_AUDIO], "true") == 0);
 
     /* --no-auth */
-    settings->authentication = false;
+    settings->Authentication = FALSE;
 
     /* --sec rdp */
-    settings->rdp_security = true;
-    settings->tls_security = false;
-    settings->nla_security = false;
-    settings->encryption = true;
-    settings->encryption_method = ENCRYPTION_METHOD_40BIT | ENCRYPTION_METHOD_128BIT | ENCRYPTION_METHOD_FIPS;
-    settings->encryption_level = ENCRYPTION_LEVEL_CLIENT_COMPATIBLE;
+    settings->RdpSecurity = TRUE;
+    settings->TlsSecurity = FALSE;
+    settings->NlaSecurity = FALSE;
+    settings->EncryptionMethods = ENCRYPTION_METHOD_40BIT | ENCRYPTION_METHOD_128BIT | ENCRYPTION_METHOD_FIPS;
+    settings->EncryptionLevel = ENCRYPTION_LEVEL_CLIENT_COMPATIBLE;
 
     /* Use optimal width unless overridden */
-    settings->width = client->info.optimal_width;
+    settings->DesktopWidth = client->info.optimal_width;
     if (argv[IDX_WIDTH][0] != '\0')
-        settings->width = atoi(argv[IDX_WIDTH]);
+        settings->DesktopWidth = atoi(argv[IDX_WIDTH]);
 
     /* Use default width if given width is invalid. */
-    if (settings->width <= 0) {
-        settings->width = RDP_DEFAULT_WIDTH;
+    if (settings->DesktopWidth <= 0) {
+        settings->DesktopWidth = RDP_DEFAULT_WIDTH;
         guac_client_log_error(client,
                 "Invalid width: \"%s\". Using default of %i.",
-                argv[IDX_WIDTH], settings->width);
+                argv[IDX_WIDTH], settings->DesktopWidth);
     }
 
     /* Use optimal height unless overridden */
-    settings->height = client->info.optimal_height;
+    settings->DesktopHeight = client->info.optimal_height;
     if (argv[IDX_HEIGHT][0] != '\0')
-        settings->height = atoi(argv[IDX_HEIGHT]);
+        settings->DesktopHeight = atoi(argv[IDX_HEIGHT]);
 
     /* Use default height if given height is invalid. */
-    if (settings->height <= 0) {
-        settings->height = RDP_DEFAULT_HEIGHT;
+    if (settings->DesktopHeight <= 0) {
+        settings->DesktopHeight = RDP_DEFAULT_HEIGHT;
         guac_client_log_error(client,
                 "Invalid height: \"%s\". Using default of %i.",
-                argv[IDX_WIDTH], settings->height);
+                argv[IDX_WIDTH], settings->DesktopHeight);
     }
 
     /* Set hostname */
-    settings->hostname = strdup(hostname);
-    settings->port = port;
-    settings->window_title = strdup(hostname);
+    settings->ServerHostname = strdup(hostname);
+    settings->ServerPort = port;
+    settings->WindowTitle = strdup(hostname);
 
     /* Domain */
     if (argv[IDX_DOMAIN][0] != '\0')
-        settings->domain = strdup(argv[IDX_DOMAIN]);
+        settings->Domain = strdup(argv[IDX_DOMAIN]);
 
     /* Username */
     if (argv[IDX_USERNAME][0] != '\0')
-        settings->username = strdup(argv[IDX_USERNAME]);
+        settings->Username = strdup(argv[IDX_USERNAME]);
 
     /* Password */
     if (argv[IDX_PASSWORD][0] != '\0') {
-        settings->password = strdup(argv[IDX_PASSWORD]);
-        settings->autologon = 1;
+        settings->Password = strdup(argv[IDX_PASSWORD]);
+        settings->AutoLogonEnabled = 1;
     }
 
     /* Initial program */
     if (argv[IDX_INITIAL_PROGRAM][0] != '\0')
-        settings->shell = strdup(argv[IDX_INITIAL_PROGRAM]);
+        settings->AlternateShell = strdup(argv[IDX_INITIAL_PROGRAM]);
 
     /* Session color depth */
-    settings->color_depth = RDP_DEFAULT_DEPTH;
+    settings->ColorDepth = RDP_DEFAULT_DEPTH;
     if (argv[IDX_COLOR_DEPTH][0] != '\0')
-        settings->color_depth = atoi(argv[IDX_COLOR_DEPTH]);
+        settings->ColorDepth = atoi(argv[IDX_COLOR_DEPTH]);
 
     /* Use default depth if given depth is invalid. */
-    if (settings->color_depth == 0) {
-        settings->color_depth = RDP_DEFAULT_DEPTH;
+    if (settings->ColorDepth == 0) {
+        settings->ColorDepth = RDP_DEFAULT_DEPTH;
         guac_client_log_error(client,
                 "Invalid color-depth: \"%s\". Using default of %i.",
-                argv[IDX_WIDTH], settings->color_depth);
+                argv[IDX_WIDTH], settings->ColorDepth);
     }
 
     /* Audio enable/disable */
@@ -461,33 +462,33 @@ int guac_client_init(guac_client* client, int argc, char** argv) {
         (strcmp(argv[IDX_DISABLE_AUDIO], "true") != 0);
 
     /* Order support */
-    bitmap_cache = settings->bitmap_cache;
-    settings->os_major_type = OSMAJORTYPE_UNSPECIFIED;
-    settings->os_minor_type = OSMINORTYPE_UNSPECIFIED;
-    settings->order_support[NEG_DSTBLT_INDEX] = true;
-    settings->order_support[NEG_PATBLT_INDEX] = false; /* PATBLT not yet supported */
-    settings->order_support[NEG_SCRBLT_INDEX] = true;
-    settings->order_support[NEG_OPAQUE_RECT_INDEX] = true;
-    settings->order_support[NEG_DRAWNINEGRID_INDEX] = false;
-    settings->order_support[NEG_MULTIDSTBLT_INDEX] = false;
-    settings->order_support[NEG_MULTIPATBLT_INDEX] = false;
-    settings->order_support[NEG_MULTISCRBLT_INDEX] = false;
-    settings->order_support[NEG_MULTIOPAQUERECT_INDEX] = false;
-    settings->order_support[NEG_MULTI_DRAWNINEGRID_INDEX] = false;
-    settings->order_support[NEG_LINETO_INDEX] = false;
-    settings->order_support[NEG_POLYLINE_INDEX] = false;
-    settings->order_support[NEG_MEMBLT_INDEX] = bitmap_cache;
-    settings->order_support[NEG_MEM3BLT_INDEX] = false;
-    settings->order_support[NEG_MEMBLT_V2_INDEX] = bitmap_cache;
-    settings->order_support[NEG_MEM3BLT_V2_INDEX] = false;
-    settings->order_support[NEG_SAVEBITMAP_INDEX] = false;
-    settings->order_support[NEG_GLYPH_INDEX_INDEX] = true;
-    settings->order_support[NEG_FAST_INDEX_INDEX] = true;
-    settings->order_support[NEG_FAST_GLYPH_INDEX] = true;
-    settings->order_support[NEG_POLYGON_SC_INDEX] = false;
-    settings->order_support[NEG_POLYGON_CB_INDEX] = false;
-    settings->order_support[NEG_ELLIPSE_SC_INDEX] = false;
-    settings->order_support[NEG_ELLIPSE_CB_INDEX] = false;
+    BitmapCacheEnabled = settings->BitmapCacheEnabled;
+    settings->OsMajorType = OSMAJORTYPE_UNSPECIFIED;
+    settings->OsMinorType = OSMINORTYPE_UNSPECIFIED;
+    settings->OrderSupport[NEG_DSTBLT_INDEX] = TRUE;
+    settings->OrderSupport[NEG_PATBLT_INDEX] = FALSE; /* PATBLT not yet supported */
+    settings->OrderSupport[NEG_SCRBLT_INDEX] = TRUE;
+    settings->OrderSupport[NEG_OPAQUE_RECT_INDEX] = TRUE;
+    settings->OrderSupport[NEG_DRAWNINEGRID_INDEX] = FALSE;
+    settings->OrderSupport[NEG_MULTIDSTBLT_INDEX] = FALSE;
+    settings->OrderSupport[NEG_MULTIPATBLT_INDEX] = FALSE;
+    settings->OrderSupport[NEG_MULTISCRBLT_INDEX] = FALSE;
+    settings->OrderSupport[NEG_MULTIOPAQUERECT_INDEX] = FALSE;
+    settings->OrderSupport[NEG_MULTI_DRAWNINEGRID_INDEX] = FALSE;
+    settings->OrderSupport[NEG_LINETO_INDEX] = FALSE;
+    settings->OrderSupport[NEG_POLYLINE_INDEX] = FALSE;
+    settings->OrderSupport[NEG_MEMBLT_INDEX] = BitmapCacheEnabled;
+    settings->OrderSupport[NEG_MEM3BLT_INDEX] = FALSE;
+    settings->OrderSupport[NEG_MEMBLT_V2_INDEX] = BitmapCacheEnabled;
+    settings->OrderSupport[NEG_MEM3BLT_V2_INDEX] = FALSE;
+    settings->OrderSupport[NEG_SAVEBITMAP_INDEX] = FALSE;
+    settings->OrderSupport[NEG_GLYPH_INDEX_INDEX] = TRUE;
+    settings->OrderSupport[NEG_FAST_INDEX_INDEX] = TRUE;
+    settings->OrderSupport[NEG_FAST_GLYPH_INDEX] = TRUE;
+    settings->OrderSupport[NEG_POLYGON_SC_INDEX] = FALSE;
+    settings->OrderSupport[NEG_POLYGON_CB_INDEX] = FALSE;
+    settings->OrderSupport[NEG_ELLIPSE_SC_INDEX] = FALSE;
+    settings->OrderSupport[NEG_ELLIPSE_CB_INDEX] = FALSE;
 
     /* Store client data */
     guac_client_data->rdp_inst = rdp_inst;
@@ -523,7 +524,7 @@ int guac_client_init(guac_client* client, int argc, char** argv) {
     __guac_rdp_client_load_keymap(client, chosen_keymap);
 
     /* Set server-side keymap */
-    settings->kbd_layout = chosen_keymap->freerdp_keyboard_layout; 
+    settings->KeyboardLayout = chosen_keymap->freerdp_keyboard_layout;
 
     /* Connect to RDP server */
     if (!freerdp_connect(rdp_inst)) {
@@ -539,18 +540,18 @@ int guac_client_init(guac_client* client, int argc, char** argv) {
     }
 
     /* Send connection name */
-    guac_protocol_send_name(client->socket, settings->window_title);
+    guac_protocol_send_name(client->socket, settings->WindowTitle);
 
     /* Send size */
     guac_protocol_send_size(client->socket, GUAC_DEFAULT_LAYER,
-            settings->width, settings->height);
+            settings->DesktopWidth, settings->DesktopHeight);
 
     /* Create glyph surfaces */
     guac_client_data->opaque_glyph_surface = cairo_image_surface_create(
-            CAIRO_FORMAT_RGB24, settings->width, settings->height);
+            CAIRO_FORMAT_RGB24, settings->DesktopWidth, settings->DesktopHeight);
 
     guac_client_data->trans_glyph_surface = cairo_image_surface_create(
-            CAIRO_FORMAT_ARGB32, settings->width, settings->height);
+            CAIRO_FORMAT_ARGB32, settings->DesktopWidth, settings->DesktopHeight);
 
     /* Set default pointer */
     guac_rdp_set_default_pointer(client);

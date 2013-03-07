@@ -38,11 +38,7 @@
 #ifndef _GUAC_RDP_RDP_KEYMAP_H
 #define _GUAC_RDP_RDP_KEYMAP_H
 
-#ifdef HAVE_FREERDP_LOCALE_KEYBOARD_H
 #include <freerdp/locale/keyboard.h>
-#else
-#include <freerdp/kbd/layouts.h>
-#endif
 
 /**
  * Represents a keysym-to-scancode mapping for RDP, with extra information
@@ -107,7 +103,7 @@ struct guac_rdp_keymap {
      * keymap. If this keymap is selected, this layout
      * will be requested from the server.
      */
-    const uint32 freerdp_keyboard_layout;
+    const UINT32 freerdp_keyboard_layout;
 
 };
 

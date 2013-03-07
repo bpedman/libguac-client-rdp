@@ -40,7 +40,6 @@
 
 #include <freerdp/constants.h>
 #include <freerdp/types.h>
-#include <freerdp/utils/memory.h>
 #include <freerdp/utils/stream.h>
 #include <freerdp/utils/svc_plugin.h>
 
@@ -53,9 +52,27 @@
 
 /* Define service, associate with "rdpsnd" channel */
 
-DEFINE_SVC_PLUGIN(guac_rdpsnd, "rdpsnd",
-    CHANNEL_OPTION_INITIALIZED | CHANNEL_OPTION_ENCRYPT_RDP)
+int VirtualChannelEntry(PCHANNEL_ENTRY_POINTS pEntryPoints) {
+	guac_rdpsndPlugin* _p;
 
+	_p = (guac_rdpsndPlugin*) malloc(sizeof(guac_rdpsndPlugin));
+	ZeroMemory(_p, sizeof(guac_rdpsndPlugin));
+
+	_p->plugin.channel_def.options =
+			CHANNEL_OPTION_INITIALIZED |
+			CHANNEL_OPTION_ENCRYPT_RDP;
+
+	strcpy(_p->plugin.channel_def.name, "guacsnd");
+
+	_p->plugin.connect_callback = guac_rdpsnd_process_connect;
+	_p->plugin.receive_callback = guac_rdpsnd_process_receive;
+	_p->plugin.event_callback = guac_rdpsnd_process_event;
+	_p->plugin.terminate_callback = guac_rdpsnd_process_terminate;
+
+	svc_plugin_init((rdpSvcPlugin*) _p, pEntryPoints);
+
+	return 1;
+}
 
 /* 
  * Service Handlers
@@ -67,16 +84,13 @@ void guac_rdpsnd_process_connect(rdpSvcPlugin* plugin) {
     audio_stream* audio = (audio_stream*)
         plugin->channel_entry_points.pExtendedData;
 
-    /* Update every 10 ms */
-    plugin->interval_ms = 10;
-
     /* Log that sound has been loaded */
-    guac_client_log_info(audio->client, "guac_rdpsnd connected.");
+    guac_client_log_info(audio->client, "guacsnd connected.");
 
 }
 
 void guac_rdpsnd_process_terminate(rdpSvcPlugin* plugin) {
-    xfree(plugin);
+    free(plugin);
 }
 
 void guac_rdpsnd_process_event(rdpSvcPlugin* plugin, RDP_EVENT* event) {
@@ -94,9 +108,9 @@ void guac_rdpsnd_process_receive(rdpSvcPlugin* plugin,
         plugin->channel_entry_points.pExtendedData;
 
     /* Read RDPSND PDU header */
-    stream_read_uint8(input_stream, header.message_type);
-    stream_seek_uint8(input_stream);
-    stream_read_uint16(input_stream, header.body_size);
+    stream_read_BYTE(input_stream, header.message_type);
+    stream_seek_BYTE(input_stream);
+    stream_read_UINT16(input_stream, header.body_size);
 
     /* 
      * If next PDU is SNDWAVE (due to receiving WaveInfo PDU previously),

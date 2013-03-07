@@ -47,7 +47,6 @@
 #include <guacamole/protocol.h>
 
 #include <freerdp/freerdp.h>
-#include <freerdp/utils/memory.h>
 #include <freerdp/codec/color.h>
 #include <freerdp/codec/bitmap.h>
 
@@ -97,7 +96,7 @@ void guac_rdp_bitmap_new(rdpContext* context, rdpBitmap* bitmap) {
         /* Convert image data to 32-bit RGB */
         unsigned char* image_buffer = freerdp_image_convert(bitmap->data, NULL,
                 bitmap->width, bitmap->height,
-                context->instance->settings->color_depth,
+                context->instance->settings->ColorDepth,
                 32, ((rdp_freerdp_context*) context)->clrconv);
 
         /* Free existing image, if any */
@@ -174,7 +173,7 @@ void guac_rdp_bitmap_free(rdpContext* context, rdpBitmap* bitmap) {
 
 }
 
-void guac_rdp_bitmap_setsurface(rdpContext* context, rdpBitmap* bitmap, boolean primary) {
+void guac_rdp_bitmap_setsurface(rdpContext* context, rdpBitmap* bitmap, BOOL primary) {
     guac_client* client = ((rdp_freerdp_context*) context)->client;
 
     if (primary)
@@ -194,21 +193,23 @@ void guac_rdp_bitmap_setsurface(rdpContext* context, rdpBitmap* bitmap, boolean 
 
 }
 
-void guac_rdp_bitmap_decompress(rdpContext* context, rdpBitmap* bitmap, uint8* data, int width, int height, int bpp, int length, boolean compressed) {
+void guac_rdp_bitmap_decompress(rdpContext* context, rdpBitmap* bitmap,
+		BYTE* data, int width, int height, int bpp, int length,
+		BOOL compressed, int codec_id) {
 
     int size = width * height * (bpp + 7) / 8;
 
     if (bitmap->data == NULL)
-        bitmap->data = (uint8*) xmalloc(size);
+        bitmap->data = (BYTE*) malloc(size);
     else
-        bitmap->data = (uint8*) xrealloc(bitmap->data, size);
+        bitmap->data = (BYTE*) realloc(bitmap->data, size);
 
     if (compressed)
         bitmap_decompress(data, bitmap->data, width, height, length, bpp, bpp);
     else
         freerdp_image_flip(data, bitmap->data, width, height, bpp);
 
-    bitmap->compressed = false;
+    bitmap->compressed = FALSE;
     bitmap->length = size;
     bitmap->bpp = bpp;
 

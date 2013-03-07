@@ -40,7 +40,6 @@
 #include <string.h>
 #include <freerdp/constants.h>
 #include <freerdp/types.h>
-#include <freerdp/utils/memory.h>
 #include <freerdp/utils/stream.h>
 #include <freerdp/utils/svc_plugin.h>
 
@@ -70,34 +69,34 @@ void guac_rdpsnd_formats_handler(guac_rdpsndPlugin* rdpsnd,
 
     /* Format header */
     stream_seek(input_stream, 14);
-    stream_read_uint16(input_stream, server_format_count);
-    stream_seek_uint8(input_stream);
-    stream_read_uint16(input_stream, server_version);
-    stream_seek_uint8(input_stream);
+    stream_read_UINT16(input_stream, server_format_count);
+    stream_seek_BYTE(input_stream);
+    stream_read_UINT16(input_stream, server_version);
+    stream_seek_BYTE(input_stream);
 
     /* Initialize Client Audio Formats and Version PDU */
     output_stream = stream_new(24);
-    stream_write_uint8(output_stream,  SNDC_FORMATS);
-    stream_write_uint8(output_stream,  0);
+    stream_write_BYTE(output_stream,  SNDC_FORMATS);
+    stream_write_BYTE(output_stream,  0);
 
     /* Fill in body size later */
-    stream_seek_uint16(output_stream); /* offset = 0x02 */
+    stream_seek_UINT16(output_stream); /* offset = 0x02 */
 
     /* Flags, volume, and pitch */
-    stream_write_uint32(output_stream, TSSNDCAPS_ALIVE);
-    stream_write_uint32(output_stream, 0);
-    stream_write_uint32(output_stream, 0);
+    stream_write_UINT32(output_stream, TSSNDCAPS_ALIVE);
+    stream_write_UINT32(output_stream, 0);
+    stream_write_UINT32(output_stream, 0);
 
     /* Datagram port (UDP) */
-    stream_write_uint16(output_stream, 0);
+    stream_write_UINT16(output_stream, 0);
 
     /* Fill in format count later */
-    stream_seek_uint16(output_stream); /* offset = 0x12 */
+    stream_seek_UINT16(output_stream); /* offset = 0x12 */
 
     /* Version and padding */
-    stream_write_uint8(output_stream,  0);
-    stream_write_uint16(output_stream, 6);
-    stream_write_uint8(output_stream,  0);
+    stream_write_BYTE(output_stream,  0);
+    stream_write_UINT16(output_stream, 6);
+    stream_write_BYTE(output_stream,  0);
 
     /* Check each server format, respond if supported */
     for (i=0; i < server_format_count; i++) {
@@ -114,15 +113,15 @@ void guac_rdpsnd_formats_handler(guac_rdpsndPlugin* rdpsnd,
         stream_get_mark(input_stream, format_start);
 
         /* Read format */
-        stream_read_uint16(input_stream, format_tag);
-        stream_read_uint16(input_stream, channels);
-        stream_read_uint32(input_stream, rate);
-        stream_seek_uint32(input_stream);
-        stream_seek_uint16(input_stream);
-        stream_read_uint16(input_stream, bps);
+        stream_read_UINT16(input_stream, format_tag);
+        stream_read_UINT16(input_stream, channels);
+        stream_read_UINT32(input_stream, rate);
+        stream_seek_UINT32(input_stream);
+        stream_seek_UINT16(input_stream);
+        stream_read_UINT16(input_stream, bps);
 
         /* Skip past extra data */
-        stream_read_uint16(input_stream, body_size);
+        stream_read_UINT16(input_stream, body_size);
         stream_seek(input_stream, body_size);
 
         /* If PCM, accept */
@@ -171,11 +170,11 @@ void guac_rdpsnd_formats_handler(guac_rdpsndPlugin* rdpsnd,
 
     /* Set body size */
     stream_set_pos(output_stream, 0x02);
-    stream_write_uint16(output_stream, output_body_size);
+    stream_write_UINT16(output_stream, output_body_size);
 
     /* Set format count */
     stream_set_pos(output_stream, 0x12);
-    stream_write_uint16(output_stream, rdpsnd->format_count);
+    stream_write_UINT16(output_stream, rdpsnd->format_count);
 
     /* Reposition cursor at end (necessary for message send) */
     stream_set_mark(output_stream, output_stream_end);
@@ -189,11 +188,11 @@ void guac_rdpsnd_formats_handler(guac_rdpsndPlugin* rdpsnd,
 
         /* Always send High Quality for now */
         output_stream = stream_new(8);
-        stream_write_uint8(output_stream, SNDC_QUALITYMODE);
-        stream_write_uint8(output_stream, 0);
-        stream_write_uint16(output_stream, 4);
-        stream_write_uint16(output_stream, HIGH_QUALITY);
-        stream_write_uint16(output_stream, 0);
+        stream_write_BYTE(output_stream, SNDC_QUALITYMODE);
+        stream_write_BYTE(output_stream, 0);
+        stream_write_UINT16(output_stream, 4);
+        stream_write_UINT16(output_stream, HIGH_QUALITY);
+        stream_write_UINT16(output_stream, 0);
 
         svc_plugin_send((rdpSvcPlugin*)rdpsnd, output_stream);
     }
@@ -214,16 +213,16 @@ void guac_rdpsnd_training_handler(guac_rdpsndPlugin* rdpsnd,
         (rdp_guac_client_data*) audio->client->data;
 
     /* Read timestamp and data size */
-    stream_read_uint16(input_stream, rdpsnd->server_timestamp);
-    stream_read_uint16(input_stream, data_size);
+    stream_read_UINT16(input_stream, rdpsnd->server_timestamp);
+    stream_read_UINT16(input_stream, data_size);
 
     /* Send training response */
     output_stream = stream_new(8);
-    stream_write_uint8(output_stream, SNDC_TRAINING);
-    stream_write_uint8(output_stream, 0);
-    stream_write_uint16(output_stream, 4);
-    stream_write_uint16(output_stream, rdpsnd->server_timestamp);
-    stream_write_uint16(output_stream, data_size);
+    stream_write_BYTE(output_stream, SNDC_TRAINING);
+    stream_write_BYTE(output_stream, 0);
+    stream_write_UINT16(output_stream, 4);
+    stream_write_UINT16(output_stream, rdpsnd->server_timestamp);
+    stream_write_UINT16(output_stream, data_size);
 
     pthread_mutex_lock(&(guac_client_data->rdp_lock));
     svc_plugin_send((rdpSvcPlugin*) rdpsnd, output_stream);
@@ -239,9 +238,9 @@ void guac_rdpsnd_wave_info_handler(guac_rdpsndPlugin* rdpsnd,
     int format;
 
     /* Read wave information */
-    stream_read_uint16(input_stream, rdpsnd->server_timestamp);
-    stream_read_uint16(input_stream, format);
-    stream_read_uint8(input_stream, rdpsnd->waveinfo_block_number);
+    stream_read_UINT16(input_stream, rdpsnd->server_timestamp);
+    stream_read_UINT16(input_stream, format);
+    stream_read_BYTE(input_stream, rdpsnd->waveinfo_block_number);
     stream_seek(input_stream, 3);
     stream_read(input_stream, buffer, 4);
 
@@ -253,7 +252,7 @@ void guac_rdpsnd_wave_info_handler(guac_rdpsndPlugin* rdpsnd,
     rdpsnd->incoming_wave_size = header->body_size - 12;
 
     /* Read wave in next iteration */
-    rdpsnd->next_pdu_is_wave = true;
+    rdpsnd->next_pdu_is_wave = TRUE;
 
     /* Init stream with requested format */
     audio_stream_begin(audio,
@@ -286,12 +285,12 @@ void guac_rdpsnd_wave_handler(guac_rdpsndPlugin* rdpsnd,
     audio_stream_end(audio);
 
     /* Write Wave Confirmation PDU */
-    stream_write_uint8(output_stream, SNDC_WAVECONFIRM);
-    stream_write_uint8(output_stream, 0);
-    stream_write_uint16(output_stream, 4);
-    stream_write_uint16(output_stream, rdpsnd->server_timestamp);
-    stream_write_uint8(output_stream, rdpsnd->waveinfo_block_number);
-    stream_write_uint8(output_stream, 0);
+    stream_write_BYTE(output_stream, SNDC_WAVECONFIRM);
+    stream_write_BYTE(output_stream, 0);
+    stream_write_UINT16(output_stream, 4);
+    stream_write_UINT16(output_stream, rdpsnd->server_timestamp);
+    stream_write_BYTE(output_stream, rdpsnd->waveinfo_block_number);
+    stream_write_BYTE(output_stream, 0);
 
     /* Send Wave Confirmation PDU */
     pthread_mutex_lock(&(guac_client_data->rdp_lock));
@@ -299,7 +298,7 @@ void guac_rdpsnd_wave_handler(guac_rdpsndPlugin* rdpsnd,
     pthread_mutex_unlock(&(guac_client_data->rdp_lock));
 
     /* We no longer expect to receive wave data */
-    rdpsnd->next_pdu_is_wave = false;
+    rdpsnd->next_pdu_is_wave = FALSE;
 
 }
 

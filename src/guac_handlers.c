@@ -52,7 +52,7 @@
 #include <freerdp/codec/color.h>
 #include <freerdp/cache/cache.h>
 #include <freerdp/utils/event.h>
-#include <freerdp/plugins/cliprdr.h>
+#include <freerdp/client/cliprdr.h>
 
 #include <guacamole/socket.h>
 #include <guacamole/protocol.h>
@@ -432,7 +432,7 @@ int rdp_guac_client_clipboard_handler(guac_client* client, char* data) {
     ((rdp_guac_client_data*) client->data)->clipboard = strdup(data);
 
     /* Notify server that text data is now available */
-    format_list->formats = (uint32*) malloc(sizeof(uint32));
+    format_list->formats = (UINT32*) malloc(sizeof(UINT32));
     format_list->formats[0] = CB_FORMAT_TEXT;
     format_list->num_formats = 1;
 

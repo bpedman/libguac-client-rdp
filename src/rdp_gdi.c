@@ -369,8 +369,8 @@ void guac_rdp_gdi_memblt(rdpContext* context, MEMBLT_ORDER* memblt) {
 void guac_rdp_gdi_opaquerect(rdpContext* context, OPAQUE_RECT_ORDER* opaque_rect) {
 
     guac_client* client = ((rdp_freerdp_context*) context)->client;
-    uint32 color = freerdp_color_convert_var(opaque_rect->color,
-            context->instance->settings->color_depth, 32,
+    UINT32 color = freerdp_color_convert_var(opaque_rect->color,
+            context->instance->settings->ColorDepth, 32,
             ((rdp_freerdp_context*) context)->clrconv);
 
     const guac_layer* current_layer = ((rdp_guac_client_data*) client->data)->current_surface;
@@ -397,8 +397,8 @@ void guac_rdp_gdi_palette_update(rdpContext* context, PALETTE_UPDATE* palette) {
 
     CLRCONV* clrconv = ((rdp_freerdp_context*) context)->clrconv;
     clrconv->palette->count = palette->number;
-    clrconv->palette->entries = palette->entries;
-
+    memcpy(clrconv->palette->entries, palette->entries,
+    		sizeof(PALETTE_ENTRY) * palette->number);
 }
 
 void guac_rdp_gdi_set_bounds(rdpContext* context, rdpBounds* bounds) {
