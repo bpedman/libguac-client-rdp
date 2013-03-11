@@ -95,6 +95,7 @@ const char* GUAC_CLIENT_ARGS[] = {
     "disable-audio",
     "console",
     "console-audio",
+    "vmconnect",
     NULL
 };
 
@@ -111,6 +112,7 @@ enum ARGS_IDX {
     IDX_DISABLE_AUDIO,
     IDX_CONSOLE,
     IDX_CONSOLE_AUDIO,
+    IDX_VMCONNECT,
 
     RDP_ARGS_COUNT
 };
@@ -334,6 +336,7 @@ int guac_client_init(guac_client* client, int argc, char** argv) {
     char* hostname;
     int port = RDP_DEFAULT_PORT;
     BOOL BitmapCacheEnabled;
+    BOOL portProvided = FALSE;
 
     /**
      * Selected server-side keymap. Client will be assumed to also use this
@@ -357,8 +360,10 @@ int guac_client_init(guac_client* client, int argc, char** argv) {
     }
 
     /* If port specified, use it */
-    if (argv[IDX_PORT][0] != '\0')
-        port = atoi(argv[IDX_PORT]);
+    if (argv[IDX_PORT][0] != '\0') {
+    	port = atoi(argv[IDX_PORT]);
+    	portProvided = TRUE;
+    }
 
     hostname = argv[IDX_HOSTNAME];
 
@@ -384,16 +389,6 @@ int guac_client_init(guac_client* client, int argc, char** argv) {
     /* Console */
     settings->ConsoleSession = (strcmp(argv[IDX_CONSOLE], "true") == 0);
     settings->RemoteConsoleAudio   = (strcmp(argv[IDX_CONSOLE_AUDIO], "true") == 0);
-
-    /* --no-auth */
-    settings->Authentication = FALSE;
-
-    /* --sec rdp */
-    settings->RdpSecurity = TRUE;
-    settings->TlsSecurity = FALSE;
-    settings->NlaSecurity = FALSE;
-    settings->EncryptionMethods = ENCRYPTION_METHOD_40BIT | ENCRYPTION_METHOD_128BIT | ENCRYPTION_METHOD_FIPS;
-    settings->EncryptionLevel = ENCRYPTION_LEVEL_CLIENT_COMPATIBLE;
 
     /* Use optimal width unless overridden */
     settings->DesktopWidth = client->info.optimal_width;
@@ -423,8 +418,21 @@ int guac_client_init(guac_client* client, int argc, char** argv) {
 
     /* Set hostname */
     settings->ServerHostname = strdup(hostname);
-    settings->ServerPort = port;
     settings->WindowTitle = strdup(hostname);
+
+    // Check if doing vmconnect before setting the port to use
+    if (argv[IDX_VMCONNECT][0] != '\0') {
+    	// If the port was not provided, set to the default vmconnect port
+    	if (!portProvided) {
+    		port = 2179;
+    	}
+    	settings->NegotiateSecurityLayer = FALSE;
+    	settings->SendPreconnectionPdu = TRUE;
+    	settings->PreconnectionBlob = strdup(argv[IDX_VMCONNECT]);
+    	guac_client_log_info(client, "Connect to VM %s", settings->PreconnectionBlob);
+    }
+
+    settings->ServerPort = port;
 
     /* Domain */
     if (argv[IDX_DOMAIN][0] != '\0')
