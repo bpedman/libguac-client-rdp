@@ -390,6 +390,9 @@ int guac_client_init(guac_client* client, int argc, char** argv) {
     settings->ConsoleSession = (strcmp(argv[IDX_CONSOLE], "true") == 0);
     settings->RemoteConsoleAudio   = (strcmp(argv[IDX_CONSOLE_AUDIO], "true") == 0);
 
+    /* Trust the certificate */
+    settings->IgnoreCertificate = TRUE;
+
     /* Use optimal width unless overridden */
     settings->DesktopWidth = client->info.optimal_width;
     if (argv[IDX_WIDTH][0] != '\0')
@@ -433,6 +436,7 @@ int guac_client_init(guac_client* client, int argc, char** argv) {
     }
 
     settings->ServerPort = port;
+
 
     /* Domain */
     if (argv[IDX_DOMAIN][0] != '\0')
